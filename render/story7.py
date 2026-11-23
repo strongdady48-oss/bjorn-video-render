@@ -53,10 +53,15 @@ def glow_sprite(color, radius=90):
 
 
 def core_sprite(color, radius=20):
-    size = radius * 2
+    # Canvas 4x the radius so the blurred ellipse fades to ~0 alpha at the
+    # tile edge. The old 2x canvas clipped the blur: edge alpha was ~181/255
+    # (corners ~69), so every lit light sat inside a hard 40x40 square
+    # ("bayangan kotak" at the brave-light moments) — fixed 2026-11-23.
+    size = radius * 4
     sprite = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(sprite)
-    d.ellipse([0, 0, size - 1, size - 1], fill=color + (255,))
+    d.ellipse([radius, radius, 3 * radius - 1, 3 * radius - 1],
+              fill=color + (255,))
     return sprite.filter(ImageFilter.GaussianBlur(8))
 
 
@@ -88,7 +93,7 @@ def main():
             layer.alpha_composite(g, (x - 90, y - 90))
             c = core.copy()
             c.putalpha(c.split()[3].point(lambda v: int(v * alpha * 0.7)))
-            layer.alpha_composite(c, (x - 20, y - 20))
+            layer.alpha_composite(c, (x - c.size[0] // 2, y - c.size[1] // 2))
             frame.alpha_composite(layer)
         frame.convert("RGB").save(os.path.join(OUT_DIR, "f-%04d.png" % i))
     print("FRAMES", n_frames)
