@@ -1,0 +1,30 @@
+name: Bjorn video render
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which render to run"
+        type: choice
+        options: [story7]
+        default: story7
+
+jobs:
+  story7:
+    if: ${{ inputs.job == 'story7' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - run: python3 render/story7.py
+      - run: >
+          ffmpeg -y -framerate 24 -i render/out_s7/f-%04d.png
+          -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart
+          story7_render.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: story7_render
+          path: story7_render.mp4
