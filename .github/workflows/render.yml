@@ -20,6 +20,7 @@ jobs:
           python-version: "3.12"
       - run: pip install pillow
       - run: python3 render/story7.py
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: >
           ffmpeg -y -framerate 24 -i render/out_s7/f-%04d.png
           -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart
