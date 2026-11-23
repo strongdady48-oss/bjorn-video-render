@@ -22,12 +22,20 @@ DURATION = 16.30
 OUT_DIR = os.path.join(os.path.dirname(__file__), "out_s7")
 BASE_B64 = os.path.join(os.path.dirname(__file__), "..", "frames", "frame_s7.png.b64")
 
-# (x, y, glow colour, word-start second) — centres verified by pixel scan
-# of frame_s7.png (heart/star/sun centroids, 2026-11-23).
+# (x, y, glow colour, word-start second, glow radius) — centres verified by
+# pixel scan of frame_s7.png (heart/star/sun centroids, 2026-11-23).
+# Glow radius = the white ring ("bubble") around each light, ~50-55px: the halo
+# must fade to zero AT the ring, not spill past it onto the background.
+# Sun radius cut 90 -> 65 on 2026-11-23: its yellow halo was visible out to
+# r~65px, ~10px past the ring, reading as a yellow shadow overflowing the
+# boundary ("bayangan kuning ngelebihin batas") — measured annulus r55-65
+# excess +4.7, now ~0. Radius 65 (not 55) keeps the sun visibly lit inside
+# its ring like its siblings; heart/star kept at 90, their pink/blue spill
+# is not visible against the background.
 LIGHTS = [
-    (436, 265, (255, 90, 130), 0.40),    # pink heart — "first"
-    (540, 247, (80, 170, 255), 3.44),    # blue star — "second"
-    (700, 260, (255, 215, 80), 6.28),    # yellow sun — "third"
+    (436, 265, (255, 90, 130), 0.40, 90),    # pink heart — "first"
+    (540, 247, (80, 170, 255), 3.44, 90),    # blue star — "second"
+    (700, 260, (255, 215, 80), 6.28, 65),    # yellow sun — "third"
 ]
 
 
@@ -75,12 +83,12 @@ def main():
     base = Image.open(base_path).convert("RGB")
     w, h = base.size
 
-    glows = [(c, glow_sprite(c), core_sprite(c)) for (_, _, c, _) in LIGHTS]
+    glows = [(c, glow_sprite(c, rad), core_sprite(c)) for (_, _, c, _, rad) in LIGHTS]
     n_frames = int(round(DURATION * FPS))
     for i in range(n_frames):
         t = i / FPS
         frame = base.convert("RGBA")
-        for (x, y, color, start), (_, glow, core) in zip(LIGHTS, glows):
+        for (x, y, color, start, rad), (_, glow, core) in zip(LIGHTS, glows):
             ramp = smoothstep((t - start) / 0.6)
             if ramp <= 0:
                 continue
@@ -90,7 +98,7 @@ def main():
             layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             g = glow.copy()
             g.putalpha(g.split()[3].point(lambda v: int(v * alpha)))
-            layer.alpha_composite(g, (x - 90, y - 90))
+            layer.alpha_composite(g, (x - rad, y - rad))
             c = core.copy()
             c.putalpha(c.split()[3].point(lambda v: int(v * alpha * 0.7)))
             layer.alpha_composite(c, (x - c.size[0] // 2, y - c.size[1] // 2))
