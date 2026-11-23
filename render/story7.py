@@ -32,10 +32,28 @@ BASE_B64 = os.path.join(os.path.dirname(__file__), "..", "frames", "frame_s7.png
 # excess +4.7, now ~0. Radius 65 (not 55) keeps the sun visibly lit inside
 # its ring like its siblings; heart/star kept at 90, their pink/blue spill
 # is not visible against the background.
+# Sun radius cut 65 -> 45 on 2026-11-23 (v5): the owner STILL circled a
+# yellow blob just right of the sun's ring. Re-measured rigorously: the blob
+# is REAL render glow, not base art (base == unlit control exactly; lit adds
+# +34 yellow in the circled oval, +25 in the blob core). It sits INSIDE the
+# ring's right half (x 664-743, r 20-45), where the ring interior background
+# is dark tapestry — the same radially-symmetric glow blends invisibly into
+# the bright disc/rays on the left but reads as a separate blob on the dark
+# right. The v4 annulus average hid it (all sectors +3..+9). Radius 45 keeps
+# the halo hugging the disc (glow alpha at r=30: 0.18 -> 0.055, at r=40:
+# 0.078 -> ~0) while the core still lights the disc itself.
+# v5 second cut (same day): glow 45 alone was NOT enough — the blob was
+# still visible (blob-core excess +15.6, oval +23.6). Single-frame test
+# harness showed the CORE sprite's blurred edge (radius 20, blur 8) is the
+# other big contributor at r 20-30. So the sun also gets a smaller core
+# (radius 20 -> 14) and glow 45 -> 38: predicted blob-core excess +9.0,
+# oval +13.9, disc yellow 54.3 (base 39.9 — still clearly lit). Heart/star
+# keep glow 90 / core 20.
 LIGHTS = [
-    (436, 265, (255, 90, 130), 0.40, 90),    # pink heart — "first"
-    (540, 247, (80, 170, 255), 3.44, 90),    # blue star — "second"
-    (700, 260, (255, 215, 80), 6.28, 65),    # yellow sun — "third"
+    # (x, y, glow colour, word-start second, glow radius, core radius)
+    (436, 265, (255, 90, 130), 0.40, 90, 20),    # pink heart — "first"
+    (540, 247, (80, 170, 255), 3.44, 90, 20),    # blue star — "second"
+    (700, 260, (255, 215, 80), 6.28, 38, 14),    # yellow sun — "third"
 ]
 
 
@@ -83,12 +101,12 @@ def main():
     base = Image.open(base_path).convert("RGB")
     w, h = base.size
 
-    glows = [(c, glow_sprite(c, rad), core_sprite(c)) for (_, _, c, _, rad) in LIGHTS]
+    glows = [(c, glow_sprite(c, rad), core_sprite(c, crad)) for (_, _, c, _, rad, crad) in LIGHTS]
     n_frames = int(round(DURATION * FPS))
     for i in range(n_frames):
         t = i / FPS
         frame = base.convert("RGBA")
-        for (x, y, color, start, rad), (_, glow, core) in zip(LIGHTS, glows):
+        for (x, y, color, start, rad, _), (_, glow, core) in zip(LIGHTS, glows):
             ramp = smoothstep((t - start) / 0.6)
             if ramp <= 0:
                 continue
